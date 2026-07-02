@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>JSON → Swift · Codable model generator</title>
+<meta name="description" content="Paste JSON, get a Swift Codable struct back. Runs entirely in your browser." />
+<style>
+  :root{
+    --bg: #0f1115;
+    --panel: #15181f;
+    --panel-2: #12141a;
+    --border: #262b35;
+    --border-soft: #1d212a;
+    --text: #e8eaed;
+    --text-muted: #8b93a1;
+    --text-faint: #565d6b;
+    --json-accent: #f2a94d;
+    --json-accent-dim: #6b5636;
+    --swift-accent: #8b9dff;
+    --swift-accent-dim: #3d4270;
+    --danger: #ef6a6a;
+    --ok: #5fd08a;
+    --radius: 10px;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --sans: -apple-system, "SF Pro Text", "Segoe UI", Inter, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    height: 100%;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ---------- header ---------- */
+  header {
+    padding: 22px 28px 18px;
+    border-bottom: 1px solid var(--border-soft);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .brand h1 {
+    font-size: 17px;
+    font-weight: 650;
+    margin: 0;
+    letter-spacing: 0.2px;
+  }
+
+  .brand h1 .arrow-word {
+    color: var(--json-accent);
+  }
+  .brand h1 .arrow-word.swift-word {
+    color: var(--swift-accent);
+  }
+
+  .brand .tag {
+    font-size: 12px;
+    color: var(--text-faint);
+    font-family: var(--mono);
+  }
+
+  .privacy-note {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+  }
+  .privacy-note .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 0 3px rgba(95,208,138,0.15);
+    flex: none;
+  }
+
+  /* ---------- options bar ---------- */
+  .options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    align-items: flex-end;
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--panel-2);
+  }
+
+  .opt-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .opt-group label.opt-label {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-faint);
+    font-weight: 600;
+  }
+
+  .opt-group input[type="text"], .opt-group select {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 7px 10px;
+    border-radius: 7px;
+    outline: none;
+    min-width: 130px;
+  }
+  .opt-group input[type="text"]:focus, .opt-group select:focus {
+    border-color: var(--swift-accent);
+  }
+
+  .segmented {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    overflow: hidden;
+  }
+  .segmented button {
+    background: var(--panel);
+    color: var(--text-muted);
+    border: none;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    padding: 7px 12px;
+    cursor: pointer;
+    border-right: 1px solid var(--border);
+  }
+  .segmented button:last-child { border-right: none; }
+  .segmented button.active {
+    background: var(--swift-accent-dim);
+    color: #fff;
+  }
+
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding-bottom: 1px;
+  }
+  .checkbox-row input[type="checkbox"] {
+    accent-color: var(--swift-accent);
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+  }
+  .checkbox-row label {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .spacer { flex: 1; }
+
+  .btn {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--text-faint); }
+  .btn:active { transform: translateY(1px); }
+  .btn.ghost { background: transparent; }
+  .btn.small { font-size: 12px; padding: 6px 10px; }
+
+  /* ---------- main split ---------- */
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 40px 1fr;
+    min-height: 0;
+  }
+
+  .pane {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .pane-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .pane-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  .pane-title .swatch {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+  }
+  .json-pane .swatch { background: var(--json-accent); }
+  .swift-pane .swatch { background: var(--swift-accent); }
+
+  .pane-actions { display: flex; gap: 8px; }
+
+  .json-pane { border-right: none; }
+
+  textarea#jsonInput {
+    flex: 1;
+    resize: none;
+    border: none;
+    outline: none;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.55;
+    padding: 18px 20px;
+    tab-size: 2;
+  }
+  textarea#jsonInput::placeholder { color: var(--text-faint); }
+
+  .swift-output-wrap {
+    flex: 1;
+    overflow: auto;
+    background: var(--bg);
+  }
+
+  pre#swiftOutput {
+    margin: 0;
+    padding: 18px 20px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.55;
+    white-space: pre;
+    min-height: 100%;
+  }
+
+  pre#swiftOutput.empty {
+    color: var(--text-faint);
+    white-space: pre-wrap;
+    font-family: var(--sans);
+    font-size: 13.5px;
+  }
+
+  /* divider */
+  .divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-left: 1px solid var(--border-soft);
+    border-right: 1px solid var(--border-soft);
+    background:
+      linear-gradient(180deg, var(--json-accent-dim), var(--swift-accent-dim));
+    position: relative;
+  }
+  .divider .chip {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    z-index: 1;
+  }
+
+  /* ---------- status bar ---------- */
+  footer.status {
+    border-top: 1px solid var(--border-soft);
+    padding: 9px 28px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-faint);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  footer.status .status-msg.error { color: var(--danger); }
+  footer.status .status-msg.ok { color: var(--text-muted); }
+  footer.status .status-msg.warn { color: #d9a441; }
+
+  footer.status a { color: var(--text-faint); }
+
+  /* syntax token colors */
+  .tok-keyword { color: var(--swift-accent); }
+  .tok-type-custom { color: var(--json-accent); font-weight: 600; }
+  .tok-type-builtin { color: #6fd6c4; }
+  .tok-prop { color: var(--text); }
+  .tok-opt { color: var(--text-faint); }
+  .tok-string { color: #d78c5f; }
+  .tok-comment { color: var(--text-faint); font-style: italic; }
+  .tok-warning { color: #d9a441; font-style: italic; }
+
+  /* toast */
+  #toast {
+    position: fixed;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--sans);
+    padding: 9px 16px;
+    border-radius: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    z-index: 20;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; }
+    .divider { display: none; }
+    .pane { min-height: 320px; }
+    .json-pane { border-bottom: 1px solid var(--border-soft); }
+    header { padding: 18px 18px 14px; }
+    .options { padding: 14px 18px; }
+    .pane-head { padding: 10px 16px; }
+    textarea#jsonInput, pre#swiftOutput { padding: 14px 16px; }
+    footer.status { padding: 9px 16px; }
+  }
+
+  ::selection { background: rgba(139,157,255,0.28); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1><span class="arrow-word">JSON</span> → <span class="arrow-word swift-word">Swift</span></h1>
+    <span class="tag">Codable model generator</span>
+  </div>
+  <div class="privacy-note"><span class="dot"></span>Runs entirely in your browser — nothing is uploaded</div>
+</header>
+
+<div class="options">
+  <div class="opt-group">
+    <label class="opt-label" for="rootName">Root struct name</label>
+    <input type="text" id="rootName" value="Welcome" spellcheck="false" autocomplete="off" />
+  </div>
+
+  <div class="opt-group">
+    <label class="opt-label" for="protocolSelect">Protocol</label>
+    <select id="protocolSelect">
+      <option value="Decodable" selected>Decodable</option>
+      <option value="Codable">Codable</option>
+      <option value="Encodable">Encodable</option>
+    </select>
+  </div>
+
+  <div class="opt-group">
+    <label class="opt-label">Mutability</label>
+    <div class="segmented" id="mutSeg">
+      <button type="button" data-val="let" class="active">let</button>
+      <button type="button" data-val="var">var</button>
+    </div>
+  </div>
+
+  <div class="opt-group">
+    <label class="opt-label">&nbsp;</label>
+    <div class="checkbox-row">
+      <input type="checkbox" id="optionalToggle" checked />
+      <label for="optionalToggle">Optional properties (Type?)</label>
+    </div>
+  </div>
+
+  <div class="opt-group">
+    <label class="opt-label">&nbsp;</label>
+    <div class="checkbox-row">
+      <input type="checkbox" id="camelCaseToggle" />
+      <label for="camelCaseToggle">camelCase keys + CodingKeys</label>
+    </div>
+  </div>
+
+  <div class="opt-group">
+    <label class="opt-label">&nbsp;</label>
+    <div class="checkbox-row">
+      <input type="checkbox" id="importFoundation" />
+      <label for="importFoundation">import Foundation</label>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+
+  <button class="btn ghost small" id="sampleBtn" type="button">Load sample</button>
+</div>
+
+<main>
+  <section class="pane json-pane">
+    <div class="pane-head">
+      <div class="pane-title"><span class="swatch"></span>JSON</div>
+      <div class="pane-actions">
+        <button class="btn small ghost" id="formatBtn" type="button">Format</button>
+        <button class="btn small ghost" id="clearBtn" type="button">Clear</button>
+      </div>
+    </div>
+    <textarea id="jsonInput" placeholder="Paste your JSON here…" spellcheck="false"></textarea>
+  </section>
+
+  <div class="divider"><div class="chip">⇄</div></div>
+
+  <section class="pane swift-pane">
+    <div class="pane-head">
+      <div class="pane-title"><span class="swatch"></span>Swift</div>
+      <div class="pane-actions">
+        <button class="btn small ghost" id="copyBtn" type="button">Copy</button>
+        <button class="btn small" id="downloadBtn" type="button">Download .swift</button>
+      </div>
+    </div>
+    <div class="swift-output-wrap">
+      <pre id="swiftOutput" class="empty">Paste JSON on the left to generate a Swift Codable model here.</pre>
+    </div>
+  </section>
+</main>
+
+<footer class="status">
+  <span class="status-msg ok" id="statusMsg">Waiting for JSON…</span>
+  <span>Paste your own response JSON — the generator infers types from every field, including nested objects and arrays.</span>
+</footer>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ============================================================
+  // Core JSON -> Swift Codable generator
+  // ============================================================
+
+  const SWIFT_RESERVED = new Set([
+    "class","struct","enum","protocol","extension","import","let","var","func",
+    "return","if","else","for","while","switch","case","default","break","continue",
+    "in","is","as","try","catch","throw","throws","guard","defer","repeat","do",
+    "typealias","associatedtype","operator","precedencegroup","subscript","init",
+    "deinit","self","Self","super","nil","true","false","private","fileprivate",
+    "internal","public","open","static","final","lazy","weak","unowned","mutating",
+    "nonmutating","override","required","convenience","indirect","infix","prefix",
+    "postfix","inout","where","Any","Type","Protocol","associativity","get","set",
+    "willSet","didSet","some","actor","async","await","rethrows"
+  ]);
+
+  function capitalize(s) {
+    if (!s) return "Item";
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  function toCamelCase(key) {
+    const parts = String(key).split(/[_\-\s]+/).filter(Boolean);
+    if (parts.length <= 1) {
+      return key.length ? key.charAt(0).toLowerCase() + key.slice(1) : key;
+    }
+    return parts
+      .map((p, i) => (i === 0 ? p.charAt(0).toLowerCase() + p.slice(1) : capitalize(p)))
+      .join("");
+  }
+
+  function sanitizeBase(name) {
+    let cleaned = String(name).replace(/[^A-Za-z0-9_]/g, "_");
+    if (/^[0-9]/.test(cleaned)) cleaned = "_" + cleaned;
+    if (cleaned === "") cleaned = "Value";
+    return cleaned;
+  }
+
+  class Generator {
+    constructor(opts) {
+      this.opts = opts;
+      this.structs = [];
+      this.usedStructNames = new Set();
+    }
+
+    uniqueStructName(base) {
+      let name = capitalize(sanitizeBase(base));
+      if (!this.usedStructNames.has(name)) {
+        this.usedStructNames.add(name);
+        return name;
+      }
+      let i = 2;
+      while (this.usedStructNames.has(name + i)) i++;
+      const finalName = name + i;
+      this.usedStructNames.add(finalName);
+      return finalName;
+    }
+
+    fieldNameFor(key) {
+      let name = this.opts.useCamelCase ? toCamelCase(key) : key;
+      let cleaned = sanitizeBase(name);
+      const needsBackticks = SWIFT_RESERVED.has(cleaned);
+      const renamed = cleaned !== key;
+      return { propName: cleaned, needsBackticks, renamed };
+    }
+
+    inferType(key, values) {
+      const nonNull = values.filter((v) => v !== null && v !== undefined);
+
+      if (nonNull.length === 0) {
+        return { type: "String", warning: "no non-null sample values — set the real type" };
+      }
+
+      const kindOf = (v) => {
+        if (Array.isArray(v)) return "array";
+        if (typeof v === "object") return "object";
+        return typeof v;
+      };
+
+      const kinds = new Set(nonNull.map(kindOf));
+
+      if (kinds.size > 1) {
+        // Collect one example value per distinct kind so the person can see exactly
+        // what showed up, instead of silently guessing a single type.
+        const examples = new Map(); // swiftTypeName -> example literal
+        nonNull.forEach((v) => {
+          const k = kindOf(v);
+          let swiftName;
+          if (k === "boolean") swiftName = "Bool";
+          else if (k === "string") swiftName = "String";
+          else if (k === "number") swiftName = Number.isInteger(v) ? "Int" : "Double";
+          else if (k === "object") swiftName = "Object";
+          else swiftName = "Array";
+          if (!examples.has(swiftName)) {
+            let exampleLiteral;
+            try {
+              exampleLiteral = JSON.stringify(v);
+              if (exampleLiteral.length > 24) exampleLiteral = exampleLiteral.slice(0, 21) + "...";
+            } catch (e) {
+              exampleLiteral = String(v);
+            }
+            examples.set(swiftName, exampleLiteral);
+          }
+        });
+        const parts = [...examples.entries()].map(([t, ex]) => `${t} (e.g. ${ex})`);
+        return { type: "String", warning: `mixed types found — ${parts.join(", ")} — verify` };
+      }
+
+      const kind = [...kinds][0];
+
+      switch (kind) {
+        case "boolean":
+          return { type: "Bool", warning: null };
+        case "string":
+          return { type: "String", warning: null };
+        case "number": {
+          const allInt = nonNull.every((v) => Number.isInteger(v));
+          return { type: allInt ? "Int" : "Double", warning: null };
+        }
+        case "object": {
+          const structName = this.uniqueStructName(key);
+          this.buildStructFromMerged(structName, nonNull);
+          return { type: structName, warning: null };
+        }
+        case "array": {
+          const elements = [];
+          nonNull.forEach((arr) => elements.push(...arr));
+          const inner = this.inferType(key, elements);
+          return {
+            type: `[${inner.type}]`,
+            warning: inner.warning ? `array elements — ${inner.warning}` : null
+          };
+        }
+        default:
+          return { type: "String", warning: null };
+      }
+    }
+
+    buildStructFromMerged(structName, objValues) {
+      const keysOrder = [];
+      const seen = new Set();
+      objValues.forEach((o) => {
+        Object.keys(o).forEach((k) => {
+          if (!seen.has(k)) { seen.add(k); keysOrder.push(k); }
+        });
+      });
+
+      const structDef = { name: structName, fields: [] };
+      this.structs.push(structDef);
+
+      keysOrder.forEach((k) => {
+        const vals = objValues.map((o) => o[k]);
+        const { type, warning } = this.inferType(k, vals);
+        const { propName, needsBackticks, renamed } = this.fieldNameFor(k);
+        structDef.fields.push({ originalKey: k, propName, type, needsBackticks, renamed, warning });
+      });
+    }
+
+    generate(rootValue) {
+      let rootTypeName;
+      let rootIsArray = false;
+
+      if (Array.isArray(rootValue)) {
+        rootIsArray = true;
+        const nonNull = rootValue.filter((v) => v !== null && v !== undefined);
+        const elemName = this.uniqueStructName(this.opts.rootName || "Element");
+        if (nonNull.length && typeof nonNull[0] === "object" && !Array.isArray(nonNull[0])) {
+          this.buildStructFromMerged(elemName, nonNull);
+          rootTypeName = elemName;
+        } else {
+          rootTypeName = this.inferType("root", nonNull).type;
+        }
+      } else if (rootValue !== null && typeof rootValue === "object") {
+        rootTypeName = this.uniqueStructName(this.opts.rootName || "Welcome");
+        this.buildStructFromMerged(rootTypeName, [rootValue]);
+      } else {
+        throw new Error("Top-level JSON must be an object or an array of objects.");
+      }
+
+      return { code: this.render(rootTypeName, rootIsArray), structs: this.structs };
+    }
+
+    render(rootTypeName, rootIsArray) {
+      const { protocolName, useVar, indent, addImport, optional } = this.opts;
+      const pad = " ".repeat(indent);
+      const lines = [];
+
+      if (addImport) { lines.push("import Foundation"); lines.push(""); }
+
+      if (rootIsArray) {
+        lines.push(`// The top-level JSON is an array, so decode with:`);
+        lines.push(`// JSONDecoder().decode([${rootTypeName}].self, from: data)`);
+        lines.push("");
+      }
+
+      this.structs.forEach((s, idx) => {
+        lines.push(`struct ${s.name}: ${protocolName} {`);
+        s.fields.forEach((f) => {
+          const kw = useVar ? "var" : "let";
+          const optMark = optional ? "?" : "";
+          const nameOut = f.needsBackticks ? `\`${f.propName}\`` : f.propName;
+          const warningPart = f.warning ? `  // ⚠️ ${f.warning}` : "";
+          lines.push(`${pad}${kw} ${nameOut}: ${f.type}${optMark}${warningPart}`);
+        });
+
+        const needsCodingKeys = s.fields.some((f) => f.renamed);
+        if (needsCodingKeys) {
+          lines.push("");
+          lines.push(`${pad}enum CodingKeys: String, CodingKey {`);
+          s.fields.forEach((f) => {
+            const nameOut = f.needsBackticks ? `\`${f.propName}\`` : f.propName;
+            if (f.renamed) {
+              lines.push(`${pad}${pad}case ${nameOut} = "${f.originalKey}"`);
+            } else {
+              lines.push(`${pad}${pad}case ${nameOut}`);
+            }
+          });
+          lines.push(`${pad}}`);
+        }
+
+        lines.push("}");
+        if (idx < this.structs.length - 1) lines.push("");
+      });
+
+      return lines.join("\n");
+    }
+  }
+
+  function jsonToSwift(jsonText, opts) {
+    const parsed = JSON.parse(jsonText);
+    const gen = new Generator(opts);
+    return gen.generate(parsed);
+  }
+
+  // ============================================================
+  // Tiny cosmetic Swift syntax highlighter
+  // ============================================================
+
+  function escapeHtml(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function highlightSwift(code, customTypeNames) {
+    const customSet = new Set(customTypeNames);
+    const lines = code.split("\n");
+
+    return lines.map((line) => {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("//")) return `<span class="tok-comment">${escapeHtml(line)}</span>`;
+      if (trimmed === "" || trimmed === "{" || trimmed === "}") return escapeHtml(line);
+
+      let m = line.match(/^(\s*)(struct|enum)\s+(\w+)(:\s*)([\w,\s]+?)(\s*\{)$/);
+      if (m) {
+        const [, indent, kw, name, colon, protocols, brace] = m;
+        const protoHtml = protocols.split(",").map((p) => {
+          const t = p.trim();
+          const lead = p.slice(0, p.indexOf(t));
+          return lead + `<span class="tok-type-builtin">${escapeHtml(t)}</span>`;
+        }).join(",");
+        return `${indent}<span class="tok-keyword">${kw}</span> <span class="tok-type-custom">${escapeHtml(name)}</span>${escapeHtml(colon)}${protoHtml}${escapeHtml(brace)}`;
+      }
+
+      m = line.match(/^(\s*)(let|var)\s+(`?\w+`?):\s*(\[?\w+\]?)(\??)(\s*\/\/.*)?$/);
+      if (m) {
+        const [, indent, kw, prop, type, opt, comment] = m;
+        const isArray = type.startsWith("[");
+        const baseType = type.replace(/[\[\]]/g, "");
+        const typeClass = customSet.has(baseType) ? "tok-type-custom" : "tok-type-builtin";
+        const typeHtml = isArray
+          ? `[<span class="${typeClass}">${escapeHtml(baseType)}</span>]`
+          : `<span class="${typeClass}">${escapeHtml(baseType)}</span>`;
+        const commentHtml = comment ? `<span class="tok-warning">${escapeHtml(comment)}</span>` : "";
+        return `${indent}<span class="tok-keyword">${kw}</span> <span class="tok-prop">${escapeHtml(prop)}</span>: ${typeHtml}<span class="tok-opt">${escapeHtml(opt)}</span>${commentHtml}`;
+      }
+
+      m = line.match(/^(\s*)case\s+(`?\w+`?)(?:\s*=\s*"([^"]*)")?$/);
+      if (m) {
+        const [, indent, name, strVal] = m;
+        const rest = strVal !== undefined ? ` = <span class="tok-string">"${escapeHtml(strVal)}"</span>` : "";
+        return `${indent}<span class="tok-keyword">case</span> <span class="tok-prop">${escapeHtml(name)}</span>${rest}`;
+      }
+
+      m = line.match(/^(\s*)import\s+(\w+)$/);
+      if (m) return `${m[1]}<span class="tok-keyword">import</span> <span class="tok-type-builtin">${escapeHtml(m[2])}</span>`;
+
+      return escapeHtml(line);
+    }).join("\n");
+  }
+
+  // ============================================================
+  // UI wiring
+  // ============================================================
+
+  const jsonInput = document.getElementById("jsonInput");
+  const swiftOutput = document.getElementById("swiftOutput");
+  const statusMsg = document.getElementById("statusMsg");
+  const rootNameInput = document.getElementById("rootName");
+  const protocolSelect = document.getElementById("protocolSelect");
+  const optionalToggle = document.getElementById("optionalToggle");
+  const camelCaseToggle = document.getElementById("camelCaseToggle");
+  const importFoundation = document.getElementById("importFoundation");
+  const mutSeg = document.getElementById("mutSeg");
+  const sampleBtn = document.getElementById("sampleBtn");
+  const formatBtn = document.getElementById("formatBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const copyBtn = document.getElementById("copyBtn");
+  const downloadBtn = document.getElementById("downloadBtn");
+  const toast = document.getElementById("toast");
+
+  let mutability = "let";
+  let lastCode = "";
+
+  mutSeg.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    mutability = btn.dataset.val;
+    [...mutSeg.children].forEach((b) => b.classList.toggle("active", b === btn));
+    convert();
+  });
+
+  const SAMPLE_JSON = {
+    store_id: "MUM-104",
+    location: "Mumbai",
+    is_open: true,
+    manager_name: "Bikash",
+    store_name: null,
+    inventory: [
+      { item_id: 1021, name: "Wireless Mouse", price: 799.50, in_stock: true, categories: ["Electronics", "Accessories"] },
+      { item_id: 1022, name: "Mechanical Keyboard", price: 3499.00, in_stock: false, categories: ["Electronics", "Gaming"] }
+    ]
+  };
+
+  function showToast(text) {
+    toast.textContent = text;
+    toast.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove("show"), 1600);
+  }
+
+  function jsonParseErrorDetail(text, err) {
+    const m = /position (\d+)/.exec(err.message);
+    if (!m) return err.message;
+    const pos = parseInt(m[1], 10);
+    const upToError = text.slice(0, pos);
+    const line = upToError.split("\n").length;
+    const col = pos - upToError.lastIndexOf("\n");
+    return `${err.message} (line ${line}, column ${col})`;
+  }
+
+  function convert() {
+    const raw = jsonInput.value.trim();
+
+    if (!raw) {
+      swiftOutput.textContent = "Paste JSON on the left to generate a Swift Codable model here.";
+      swiftOutput.classList.add("empty");
+      statusMsg.textContent = "Waiting for JSON…";
+      statusMsg.className = "status-msg ok";
+      downloadBtn.disabled = false;
+      return;
+    }
+
+    const opts = {
+      rootName: rootNameInput.value.trim() || "Welcome",
+      protocolName: protocolSelect.value,
+      useVar: mutability === "var",
+      optional: optionalToggle.checked,
+      useCamelCase: camelCaseToggle.checked,
+      indent: 4,
+      addImport: importFoundation.checked
+    };
+
+    try {
+      const { code, structs } = jsonToSwift(raw, opts);
+      lastCode = code;
+      const customNames = structs.map((s) => s.name);
+      swiftOutput.innerHTML = highlightSwift(code, customNames);
+      swiftOutput.classList.remove("empty");
+
+      const totalFields = structs.reduce((sum, s) => sum + s.fields.length, 0);
+      const warningCount = structs.reduce((sum, s) => sum + s.fields.filter((f) => f.warning).length, 0);
+      const warningPart = warningCount > 0 ? ` · ⚠️ ${warningCount} field${warningCount === 1 ? "" : "s"} to review` : "";
+      statusMsg.textContent = `Valid JSON · ${structs.length} struct${structs.length === 1 ? "" : "s"} · ${totalFields} field${totalFields === 1 ? "" : "s"}${warningPart}`;
+      statusMsg.className = warningCount > 0 ? "status-msg warn" : "status-msg ok";
+    } catch (err) {
+      lastCode = "";
+      swiftOutput.textContent = "";
+      swiftOutput.classList.remove("empty");
+      statusMsg.textContent = `Invalid JSON — ${jsonParseErrorDetail(raw, err)}`;
+      statusMsg.className = "status-msg error";
+    }
+  }
+
+  let debounceTimer;
+  jsonInput.addEventListener("input", () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(convert, 180);
+  });
+
+  [rootNameInput, protocolSelect, optionalToggle, camelCaseToggle, importFoundation].forEach((el) => {
+    el.addEventListener("input", convert);
+    el.addEventListener("change", convert);
+  });
+
+  sampleBtn.addEventListener("click", () => {
+    jsonInput.value = JSON.stringify(SAMPLE_JSON, null, 2);
+    convert();
+  });
+
+  formatBtn.addEventListener("click", () => {
+    try {
+      const parsed = JSON.parse(jsonInput.value);
+      jsonInput.value = JSON.stringify(parsed, null, 2);
+      convert();
+    } catch (err) {
+      showToast("Can't format — JSON is invalid");
+    }
+  });
+
+  clearBtn.addEventListener("click", () => {
+    jsonInput.value = "";
+    convert();
+    jsonInput.focus();
+  });
+
+  copyBtn.addEventListener("click", async () => {
+    if (!lastCode) { showToast("Nothing to copy yet"); return; }
+    try {
+      await navigator.clipboard.writeText(lastCode);
+      showToast("Copied to clipboard");
+    } catch (err) {
+      const ta = document.createElement("textarea");
+      ta.value = lastCode;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      showToast("Copied to clipboard");
+    }
+  });
+
+  downloadBtn.addEventListener("click", () => {
+    if (!lastCode) { showToast("Nothing to download yet"); return; }
+    const name = sanitizeBase(rootNameInput.value.trim() || "Welcome");
+    const blob = new Blob([lastCode], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${name}.swift`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  // start with an empty editor
+  convert();
+})();
+</script>
+
+</body>
+</html>
