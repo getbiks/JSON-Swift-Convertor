@@ -98,6 +98,60 @@
     flex: none;
   }
 
+  .header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+
+  .support-links {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .support-label {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--text-faint);
+    white-space: nowrap;
+  }
+
+  .support-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    text-decoration: none;
+    font-family: var(--sans);
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1;
+    transition: border-color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+  }
+  .support-btn:hover {
+    border-color: var(--text-faint);
+    background: var(--panel-2);
+    transform: translateY(-1px);
+  }
+  .support-btn img {
+    display: block;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex: none;
+  }
+  .support-btn .icon-emoji {
+    font-size: 13px;
+    line-height: 1;
+    flex: none;
+  }
+
   /* ---------- options bar ---------- */
   .options {
     display: flex;
@@ -367,6 +421,8 @@
     .pane { min-height: 320px; }
     .json-pane { border-bottom: 1px solid var(--border-soft); }
     header { padding: 18px 18px 14px; }
+    .header-right { align-items: flex-start; width: 100%; }
+    .support-links { flex-wrap: wrap; }
     .options { padding: 14px 18px; }
     .pane-head { padding: 10px 16px; }
     textarea#jsonInput, pre#swiftOutput { padding: 14px 16px; }
@@ -381,9 +437,21 @@
 <header>
   <div class="brand">
     <h1><span class="arrow-word">JSON</span> → <span class="arrow-word swift-word">Swift</span></h1>
-    <span class="tag">Codable model generator</span>
   </div>
-  <div class="privacy-note"><span class="dot"></span>Runs entirely in your browser — nothing is uploaded</div>
+  <div class="header-right">
+    <div class="support-links">
+      <span class="support-label">Support me at</span>
+      <a class="support-btn" href="https://ko-fi.com/getbiks" target="_blank" rel="noopener noreferrer">
+        <img src="https://cdn.prod.website-files.com/5c14e387dab576fe667689cf/670f5a01229bf8a18f97a3c1_favion.avif" alt="" width="14" height="14" />
+        <span>Ko-fi</span>
+      </a>
+      <a class="support-btn" href="https://onlychai.neocities.org/support?name=Bikash%20Agarwal&upi=getbiks%40okhdfcbank" target="_blank" rel="noopener noreferrer">
+        <span class="icon-emoji" aria-hidden="true">☕</span>
+        <span>OnlyChai</span>
+      </a>
+    </div>
+    <div class="privacy-note"><span class="dot"></span>Runs entirely in your browser — nothing is uploaded</div>
+  </div>
 </header>
 
 <div class="options">
@@ -802,7 +870,7 @@
     location: "Mumbai",
     is_open: true,
     manager_name: "Bikash",
-    store_name: null,
+    store_name: "Mumbai Store",
     inventory: [
       { item_id: 1021, name: "Wireless Mouse", price: 799.50, in_stock: true, categories: ["Electronics", "Accessories"] },
       { item_id: 1022, name: "Mechanical Keyboard", price: 3499.00, in_stock: false, categories: ["Electronics", "Gaming"] }
