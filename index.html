@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+(function () {
+  try {
+    var saved = localStorage.getItem("json2swift-theme");
+    var theme = saved || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  } catch (e) {}
+})();
+</script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>JSON → Swift · Codable model generator</title>
@@ -8,6 +17,29 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20x%3D%224%22%20y%3D%224%22%20width%3D%2256%22%20height%3D%2256%22%20rx%3D%2214%22%20fill%3D%22url%28%23g%29%22/%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%224%22%20y1%3D%224%22%20x2%3D%2260%22%20y2%3D%2260%22%20gradientUnits%3D%22userSpaceOnUse%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23f2a94d%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%238b9dff%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath%20d%3D%22M20%2024H38M38%2024L32%2018M38%2024L32%2030%22%20stroke%3D%22%2312141a%22%20stroke-width%3D%225%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M44%2040H26M26%2040L32%2034M26%2040L32%2046%22%20stroke%3D%22%2312141a%22%20stroke-width%3D%225%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20fill%3D%22none%22/%3E%3C/svg%3E" />
 <style>
   :root{
+    --bg: #f7f8fa;
+    --panel: #ffffff;
+    --panel-2: #f1f3f6;
+    --border: #dfe3e9;
+    --border-soft: #eceef2;
+    --text: #1c1f26;
+    --text-muted: #5b6270;
+    --text-faint: #8b93a1;
+    --json-accent: #b5700a;
+    --json-accent-dim: #f1d9ac;
+    --swift-accent: #4a56d6;
+    --swift-accent-dim: #c7cffa;
+    --danger: #c23b3b;
+    --ok: #1f9d55;
+    --type-builtin: #0f8f7e;
+    --string-color: #a8641f;
+    --warning-color: #a66a12;
+    --radius: 10px;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --sans: -apple-system, "SF Pro Text", "Segoe UI", Inter, system-ui, sans-serif;
+  }
+
+  html[data-theme="dark"] {
     --bg: #0f1115;
     --panel: #15181f;
     --panel-2: #12141a;
@@ -22,12 +54,18 @@
     --swift-accent-dim: #3d4270;
     --danger: #ef6a6a;
     --ok: #5fd08a;
-    --radius: 10px;
-    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
-    --sans: -apple-system, "SF Pro Text", "Segoe UI", Inter, system-ui, sans-serif;
+    --type-builtin: #6fd6c4;
+    --string-color: #d78c5f;
+    --warning-color: #d9a441;
   }
 
   * { box-sizing: border-box; }
+
+  body, header, .options, .pane-head, .divider, footer.status,
+  textarea#jsonInput, pre#swiftOutput, .btn, .support-btn,
+  input, select, .segmented button {
+    transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+  }
 
   html, body {
     margin: 0;
@@ -57,8 +95,8 @@
 
   .brand {
     display: flex;
-    align-items: baseline;
-    gap: 10px;
+    flex-direction: column;
+    gap: 6px;
   }
 
   .brand h1 {
@@ -103,6 +141,19 @@
     flex-direction: column;
     align-items: flex-end;
     gap: 8px;
+  }
+
+  .theme-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .theme-label {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--text-faint);
+    white-space: nowrap;
   }
 
   .support-links {
@@ -211,7 +262,8 @@
   .segmented button:last-child { border-right: none; }
   .segmented button.active {
     background: var(--swift-accent-dim);
-    color: #fff;
+    color: var(--swift-accent);
+    font-weight: 600;
   }
 
   .checkbox-row {
@@ -256,7 +308,7 @@
   main {
     flex: 1;
     display: grid;
-    grid-template-columns: 1fr 40px 1fr;
+    grid-template-columns: 1fr 2px 1fr;
     min-height: 0;
   }
 
@@ -264,6 +316,7 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+    min-width: 0;
   }
 
   .pane-head {
@@ -286,6 +339,20 @@
     font-weight: 600;
   }
 
+  .pane-title-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .segmented.small button {
+    font-family: var(--sans);
+    font-size: 11.5px;
+    padding: 4px 9px;
+  }
+
+  .hidden { display: none !important; }
+
   .pane-title .swatch {
     width: 8px;
     height: 8px;
@@ -297,6 +364,13 @@
   .pane-actions { display: flex; gap: 8px; }
 
   .json-pane { border-right: none; }
+
+  .json-body {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    position: relative;
+  }
 
   textarea#jsonInput {
     flex: 1;
@@ -312,6 +386,75 @@
     tab-size: 2;
   }
   textarea#jsonInput::placeholder { color: var(--text-faint); }
+
+  .json-tree {
+    flex: 1;
+    overflow: auto;
+    background: var(--bg);
+    padding: 16px 20px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .json-tree.empty-state {
+    color: var(--text-faint);
+    font-family: var(--sans);
+    font-size: 13.5px;
+    white-space: pre-wrap;
+  }
+
+  .tree-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .tree-toggle {
+    flex: none;
+    width: 14px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    cursor: pointer;
+    font-size: 10px;
+    padding: 0;
+    font-family: var(--mono);
+  }
+  .tree-toggle:hover { color: var(--text-muted); }
+  .tree-spacer { flex: none; width: 14px; }
+
+  .tree-children {
+    margin-left: 7px;
+    padding-left: 11px;
+    border-left: 1px dashed var(--border-soft);
+  }
+
+  .tree-node.collapsed > .tree-children,
+  .tree-node.collapsed > .tree-close {
+    display: none;
+  }
+  .tree-node.collapsed > .tree-line .tree-summary {
+    display: inline;
+  }
+  .tree-summary {
+    display: none;
+    color: var(--text-faint);
+    font-style: italic;
+    margin-left: 4px;
+  }
+
+  .tree-key { color: var(--json-accent); overflow-wrap: anywhere; min-width: 0; }
+  .tree-punct { color: var(--text-faint); }
+  .tree-string { color: var(--string-color); overflow-wrap: anywhere; min-width: 0; }
+  .tree-number { color: var(--type-builtin); overflow-wrap: anywhere; min-width: 0; }
+  .tree-bool, .tree-null { color: var(--swift-accent); overflow-wrap: anywhere; min-width: 0; }
+  .tree-null { color: var(--text-faint); font-style: italic; }
 
   .swift-output-wrap {
     flex: 1;
@@ -338,27 +481,7 @@
 
   /* divider */
   .divider {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-left: 1px solid var(--border-soft);
-    border-right: 1px solid var(--border-soft);
-    background:
-      linear-gradient(180deg, var(--json-accent-dim), var(--swift-accent-dim));
-    position: relative;
-  }
-  .divider .chip {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-muted);
-    font-size: 13px;
-    z-index: 1;
+    background: var(--border);
   }
 
   /* ---------- status bar ---------- */
@@ -377,19 +500,19 @@
 
   footer.status .status-msg.error { color: var(--danger); }
   footer.status .status-msg.ok { color: var(--text-muted); }
-  footer.status .status-msg.warn { color: #d9a441; }
+  footer.status .status-msg.warn { color: var(--warning-color); }
 
   footer.status a { color: var(--text-faint); }
 
   /* syntax token colors */
   .tok-keyword { color: var(--swift-accent); }
   .tok-type-custom { color: var(--json-accent); font-weight: 600; }
-  .tok-type-builtin { color: #6fd6c4; }
+  .tok-type-builtin { color: var(--type-builtin); }
   .tok-prop { color: var(--text); }
   .tok-opt { color: var(--text-faint); }
-  .tok-string { color: #d78c5f; }
+  .tok-string { color: var(--string-color); }
   .tok-comment { color: var(--text-faint); font-style: italic; }
-  .tok-warning { color: #d9a441; font-style: italic; }
+  .tok-warning { color: var(--warning-color); font-style: italic; }
 
   /* toast */
   #toast {
@@ -425,7 +548,8 @@
     .support-links { flex-wrap: wrap; }
     .options { padding: 14px 18px; }
     .pane-head { padding: 10px 16px; }
-    textarea#jsonInput, pre#swiftOutput { padding: 14px 16px; }
+    textarea#jsonInput, pre#swiftOutput, .json-tree { padding: 14px 16px; }
+    .pane-head { flex-wrap: wrap; row-gap: 8px; }
     footer.status { padding: 9px 16px; }
   }
 
@@ -437,6 +561,7 @@
 <header>
   <div class="brand">
     <h1><span class="arrow-word">JSON</span> → <span class="arrow-word swift-word">Swift</span></h1>
+    <div class="privacy-note"><span class="dot"></span>Runs entirely in your browser — nothing is uploaded</div>
   </div>
   <div class="header-right">
     <div class="support-links">
@@ -450,14 +575,20 @@
         <span>OnlyChai</span>
       </a>
     </div>
-    <div class="privacy-note"><span class="dot"></span>Runs entirely in your browser — nothing is uploaded</div>
+    <div class="theme-row">
+      <span class="theme-label">Theme</span>
+      <div class="segmented" id="themeSeg">
+        <button type="button" data-val="light" class="active">Light</button>
+        <button type="button" data-val="dark">Dark</button>
+      </div>
+    </div>
   </div>
 </header>
 
 <div class="options">
   <div class="opt-group">
     <label class="opt-label" for="rootName">Root struct name</label>
-    <input type="text" id="rootName" value="Welcome" spellcheck="false" autocomplete="off" />
+    <input type="text" id="rootName" value="Response" spellcheck="false" autocomplete="off" />
   </div>
 
   <div class="opt-group">
@@ -509,16 +640,29 @@
 <main>
   <section class="pane json-pane">
     <div class="pane-head">
-      <div class="pane-title"><span class="swatch"></span>JSON</div>
-      <div class="pane-actions">
+      <div class="pane-title-row">
+        <div class="pane-title"><span class="swatch"></span>JSON</div>
+        <div class="segmented small" id="jsonViewSeg">
+          <button type="button" data-val="text" class="active">Text</button>
+          <button type="button" data-val="tree">Tree</button>
+        </div>
+      </div>
+      <div class="pane-actions" id="jsonActionsText">
         <button class="btn small ghost" id="formatBtn" type="button">Format</button>
         <button class="btn small ghost" id="clearBtn" type="button">Clear</button>
       </div>
+      <div class="pane-actions hidden" id="jsonActionsTree">
+        <button class="btn small ghost" id="expandAllBtn" type="button">Expand all</button>
+        <button class="btn small ghost" id="collapseAllBtn" type="button">Collapse all</button>
+      </div>
     </div>
-    <textarea id="jsonInput" placeholder="Paste your JSON here…" spellcheck="false"></textarea>
+    <div class="json-body">
+      <textarea id="jsonInput" placeholder="Paste your JSON here…" spellcheck="false"></textarea>
+      <div id="jsonTreeView" class="json-tree hidden"></div>
+    </div>
   </section>
 
-  <div class="divider"><div class="chip">⇄</div></div>
+  <div class="divider"></div>
 
   <section class="pane swift-pane">
     <div class="pane-head">
@@ -615,7 +759,7 @@
       const nonNull = values.filter((v) => v !== null && v !== undefined);
 
       if (nonNull.length === 0) {
-        return { type: "String", warning: "no non-null sample values — set the real type" };
+        return { type: "Any", warning: "no non-null sample values — set the real type" };
       }
 
       const kindOf = (v) => {
@@ -718,7 +862,7 @@
           rootTypeName = this.inferType("root", nonNull).type;
         }
       } else if (rootValue !== null && typeof rootValue === "object") {
-        rootTypeName = this.uniqueStructName(this.opts.rootName || "Welcome");
+        rootTypeName = this.uniqueStructName(this.opts.rootName || "Response");
         this.buildStructFromMerged(rootTypeName, [rootValue]);
       } else {
         throw new Error("Top-level JSON must be an object or an array of objects.");
@@ -854,8 +998,199 @@
   const downloadBtn = document.getElementById("downloadBtn");
   const toast = document.getElementById("toast");
 
+  const jsonViewSeg = document.getElementById("jsonViewSeg");
+  const jsonActionsText = document.getElementById("jsonActionsText");
+  const jsonActionsTree = document.getElementById("jsonActionsTree");
+  const jsonTreeView = document.getElementById("jsonTreeView");
+  const expandAllBtn = document.getElementById("expandAllBtn");
+  const collapseAllBtn = document.getElementById("collapseAllBtn");
+
   let mutability = "let";
   let lastCode = "";
+
+  // ============================================================
+  // Collapsible JSON tree view
+  // ============================================================
+
+  function renderTreeEntry(key, value, isLast, container) {
+    if (value !== null && typeof value === "object") {
+      renderTreeContainer(key, value, isLast, container);
+    } else {
+      renderTreeLeaf(key, value, isLast, container);
+    }
+  }
+
+  function appendKeyLabel(line, key) {
+    if (key === null || typeof key === "number") return;
+    const keySpan = document.createElement("span");
+    keySpan.className = "tree-key";
+    keySpan.textContent = `"${key}"`;
+    line.appendChild(keySpan);
+    const colon = document.createElement("span");
+    colon.className = "tree-punct";
+    colon.textContent = ": ";
+    line.appendChild(colon);
+  }
+
+  function renderTreeContainer(key, value, isLast, container) {
+    const isArray = Array.isArray(value);
+    const entries = isArray ? value.map((v, i) => [i, v]) : Object.entries(value);
+    const openChar = isArray ? "[" : "{";
+    const closeChar = isArray ? "]" : "}";
+    const countLabel = isArray
+      ? `${entries.length} item${entries.length === 1 ? "" : "s"}`
+      : `${entries.length} key${entries.length === 1 ? "" : "s"}`;
+
+    const node = document.createElement("div");
+    node.className = "tree-node";
+
+    const line = document.createElement("div");
+    line.className = "tree-line";
+
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "tree-toggle";
+    toggle.textContent = "▾";
+    toggle.setAttribute("aria-label", "Toggle");
+    line.appendChild(toggle);
+
+    appendKeyLabel(line, key);
+
+    const openSpan = document.createElement("span");
+    openSpan.className = "tree-punct";
+    openSpan.textContent = openChar;
+    line.appendChild(openSpan);
+
+    const summary = document.createElement("span");
+    summary.className = "tree-summary";
+    summary.textContent = ` ${countLabel} ${closeChar}${isLast ? "" : ","}`;
+    line.appendChild(summary);
+
+    node.appendChild(line);
+
+    const childrenDiv = document.createElement("div");
+    childrenDiv.className = "tree-children";
+    entries.forEach(([k, v], idx) => {
+      renderTreeEntry(k, v, idx === entries.length - 1, childrenDiv);
+    });
+    node.appendChild(childrenDiv);
+
+    const closeLine = document.createElement("div");
+    closeLine.className = "tree-line tree-close";
+    const spacer = document.createElement("span");
+    spacer.className = "tree-spacer";
+    closeLine.appendChild(spacer);
+    const closeSpan = document.createElement("span");
+    closeSpan.className = "tree-punct";
+    closeSpan.textContent = closeChar + (isLast ? "" : ",");
+    closeLine.appendChild(closeSpan);
+    node.appendChild(closeLine);
+
+    toggle.addEventListener("click", () => {
+      node.classList.toggle("collapsed");
+      toggle.textContent = node.classList.contains("collapsed") ? "▸" : "▾";
+    });
+
+    container.appendChild(node);
+  }
+
+  function renderTreeLeaf(key, value, isLast, container) {
+    const line = document.createElement("div");
+    line.className = "tree-line";
+
+    const spacer = document.createElement("span");
+    spacer.className = "tree-spacer";
+    line.appendChild(spacer);
+
+    appendKeyLabel(line, key);
+
+    const valueSpan = document.createElement("span");
+    if (value === null) {
+      valueSpan.className = "tree-null";
+      valueSpan.textContent = "null";
+    } else if (typeof value === "boolean") {
+      valueSpan.className = "tree-bool";
+      valueSpan.textContent = String(value);
+    } else if (typeof value === "number") {
+      valueSpan.className = "tree-number";
+      valueSpan.textContent = String(value);
+    } else {
+      valueSpan.className = "tree-string";
+      valueSpan.textContent = JSON.stringify(value);
+    }
+    line.appendChild(valueSpan);
+
+    if (!isLast) {
+      const comma = document.createElement("span");
+      comma.className = "tree-punct";
+      comma.textContent = ",";
+      line.appendChild(comma);
+    }
+
+    container.appendChild(line);
+  }
+
+  function buildTree(rootValue) {
+    const frag = document.createElement("div");
+    renderTreeEntry(null, rootValue, true, frag);
+    return frag;
+  }
+
+  function showTextView() {
+    jsonInput.classList.remove("hidden");
+    jsonTreeView.classList.add("hidden");
+    jsonActionsText.classList.remove("hidden");
+    jsonActionsTree.classList.add("hidden");
+    [...jsonViewSeg.children].forEach((b) => b.classList.toggle("active", b.dataset.val === "text"));
+  }
+
+  function showTreeView() {
+    jsonTreeView.innerHTML = "";
+    jsonTreeView.classList.remove("empty-state");
+    const raw = jsonInput.value.trim();
+
+    if (!raw) {
+      jsonTreeView.classList.add("empty-state");
+      jsonTreeView.textContent = "Paste JSON in Text view first — it'll show up here as a collapsible tree.";
+    } else {
+      try {
+        const parsed = JSON.parse(raw);
+        jsonTreeView.appendChild(buildTree(parsed));
+      } catch (err) {
+        jsonTreeView.classList.add("empty-state");
+        jsonTreeView.textContent = `Can't show the tree — fix the JSON in Text view first.\n\n${jsonParseErrorDetail(raw, err)}`;
+      }
+    }
+
+    jsonInput.classList.add("hidden");
+    jsonTreeView.classList.remove("hidden");
+    jsonActionsText.classList.add("hidden");
+    jsonActionsTree.classList.remove("hidden");
+    [...jsonViewSeg.children].forEach((b) => b.classList.toggle("active", b.dataset.val === "tree"));
+  }
+
+  jsonViewSeg.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    if (btn.dataset.val === "tree") showTreeView();
+    else showTextView();
+  });
+
+  expandAllBtn.addEventListener("click", () => {
+    jsonTreeView.querySelectorAll(".tree-node.collapsed").forEach((n) => {
+      n.classList.remove("collapsed");
+      const t = n.querySelector(":scope > .tree-line > .tree-toggle");
+      if (t) t.textContent = "▾";
+    });
+  });
+
+  collapseAllBtn.addEventListener("click", () => {
+    jsonTreeView.querySelectorAll(".tree-node").forEach((n) => {
+      n.classList.add("collapsed");
+      const t = n.querySelector(":scope > .tree-line > .tree-toggle");
+      if (t) t.textContent = "▸";
+    });
+  });
 
   mutSeg.addEventListener("click", (e) => {
     const btn = e.target.closest("button");
@@ -907,7 +1242,7 @@
     }
 
     const opts = {
-      rootName: rootNameInput.value.trim() || "Welcome",
+      rootName: rootNameInput.value.trim() || "Response",
       protocolName: protocolSelect.value,
       useVar: mutability === "var",
       optional: optionalToggle.checked,
@@ -951,6 +1286,7 @@
   sampleBtn.addEventListener("click", () => {
     jsonInput.value = JSON.stringify(SAMPLE_JSON, null, 2);
     convert();
+    if (!jsonTreeView.classList.contains("hidden")) showTreeView();
   });
 
   formatBtn.addEventListener("click", () => {
@@ -987,7 +1323,7 @@
 
   downloadBtn.addEventListener("click", () => {
     if (!lastCode) { showToast("Nothing to download yet"); return; }
-    const name = sanitizeBase(rootNameInput.value.trim() || "Welcome");
+    const name = sanitizeBase(rootNameInput.value.trim() || "Response");
     const blob = new Blob([lastCode], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -997,6 +1333,41 @@
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  });
+
+  // ============================================================
+  // Theme (light/dark) handling
+  // ============================================================
+
+  const THEME_KEY = "json2swift-theme";
+  const themeSeg = document.getElementById("themeSeg");
+  const prefersDarkMq = window.matchMedia("(prefers-color-scheme: dark)");
+
+  function currentTheme() {
+    return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    [...themeSeg.children].forEach((b) => b.classList.toggle("active", b.dataset.val === theme));
+  }
+
+  // sync the control with whatever the early head script already applied
+  applyTheme(currentTheme());
+
+  themeSeg.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    const next = btn.dataset.val;
+    applyTheme(next);
+    try { localStorage.setItem(THEME_KEY, next); } catch (e2) {}
+  });
+
+  // follow the system theme live, but only if the person hasn't manually chosen one
+  prefersDarkMq.addEventListener("change", (e) => {
+    let hasManualPref = false;
+    try { hasManualPref = !!localStorage.getItem(THEME_KEY); } catch (err) {}
+    if (!hasManualPref) applyTheme(e.matches ? "dark" : "light");
   });
 
   // start with an empty editor
